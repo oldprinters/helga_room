@@ -12,7 +12,7 @@ The range readings are in units of mm. */
 VL53L0X sensor;
 Timer tVL53(50);  //замер расстояния
 Timer tVL53out(500);  //замер расстояния
-FilterES fes(5, 0.85);
+FilterES fes(5, 0.9);
 uint16_t range{};
 
 void setup()
