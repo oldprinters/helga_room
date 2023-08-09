@@ -5,8 +5,32 @@
 // #include <NTPClient.h>
 #include "Timer.h"
 #include <Adafruit_BMP280.h>
+#include <BH1750.h>
 
 Adafruit_BMP280 bmp; // I2C
+
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+// #include <DHT_U.h>
+
+#define DHTPIN 4     // Digital pin connected to the DHT sensor 
+// Feather HUZZAH ESP8266 note: use pins 3, 4, 5, 12, 13 or 14 --
+// Pin 15 can work but DHT must be disconnected during program upload.
+
+// Uncomment the type of sensor in use:
+#define DHTTYPE    DHT11     // DHT 11
+// #define DHTTYPE    DHT22     // DHT 22 (AM2302)
+//#define DHTTYPE    DHT21     // DHT 21 (AM2301)
+
+// See guide for details on sensor wiring and usage:
+//   https://learn.adafruit.com/dht/overview
+
+DHT dht(DHTPIN, DHTTYPE);
+
+BH1750 lightMeter(0x23);
+
+
+
 //https://kit.alexgyver.ru/tutorials/fastbot/
 // https://github.com/GyverLibs/FastBot
 //esp_http_client.h
@@ -15,7 +39,7 @@ Adafruit_BMP280 bmp; // I2C
 //BH1750 lightMeter(0x23);
 
 Timer timerPressure(600000);  //замер освещённости
-Timer timerTemper(60000);  
+Timer timerTemper(6000);  
 
 const char* ssid = "ivanych";
 const char* password = "stroykomitet";
@@ -30,7 +54,10 @@ PubSubClient client(espClient);
 // const char* msgLightOn= "balcony/lightOn";
 // const char* msgLightOff="balcony/lightOff";
 const char* msgTemper="balcony/temper";
+const char* msgDHTemper="balcony/temperDHT";
 const char* msgPressure="balcony/pressure";
+const char* msgHumidity="balcony/humidity";
+const char* msgLight="balcony/light";
 String pressure{};
 //-----------------------------------
 void setup_wifi() {
@@ -91,6 +118,14 @@ void setup() {
   //---------------------------
   reconnect();
   setup_280();
+
+  dht.begin();
+
+  if (lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE)) {
+    Serial.println(F("BH1750 Advanced begin"));
+  } else {
+    Serial.println(F("Error initialising BH1750"));
+  }
 }
 //----------------------------------------
 void controlWiFi(){
@@ -115,6 +150,13 @@ void loop() {
           double pressure = bmp.readPressure() * 0.00750062;
           client.publish( msgPressure, String(pressure).c_str() );
       }
+    }
+    client.publish(msgDHTemper, String(dht.readTemperature()).c_str());
+    client.publish(msgHumidity, String(dht.readHumidity()).c_str());
+
+    if (lightMeter.measurementReady()) {
+      float lux = lightMeter.readLightLevel();
+      client.publish(msgLight, String(lux).c_str());
     }
   }
   
